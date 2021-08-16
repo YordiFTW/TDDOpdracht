@@ -1,14 +1,8 @@
-﻿using System;
-
-using Moq;
-using TDD_Opdracht.Models;
-using TDD_Opdracht.Repositories;
-using TDD_Opdracht.Services;
+using System;
 using Xunit;
 
-namespace UnitTest
+namespace XUnit
 {
-
     public class UnitTest1
     {
         [Fact]
@@ -29,7 +23,7 @@ namespace UnitTest
         {
             var userDataService = new UserDataService();
 
-            User user = new User() ;
+            User user = new User();
             user.Email = "test@adwad.nl";
             user.FirstName = "testadwad";
             user.LastName = (string)value;
@@ -54,3 +48,4 @@ namespace UnitTest
 
     }
 }
+
