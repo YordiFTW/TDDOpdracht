@@ -23,14 +23,8 @@ namespace TDD_Opdracht.Services
 
         public void Save(User user)
         {
-            User newUser = new User();
+            userRepo.AddUser(user);
 
-            user.Id = newUser.Id;
-            user.FirstName = newUser.FirstName;
-            user.LastName = newUser.LastName;
-            user.Email = newUser.Email;
-
-            userRepo.AddUser(newUser);
         }
 
         public bool Validate(User user)
@@ -53,11 +47,11 @@ namespace TDD_Opdracht.Services
                 return true;
             }
 
-            if (userRepo.GetAllUsers().Where(x => x.Email == user.Email).ToList().Contains(user))
+            if (!userRepo.GetAllUsers().Any(i =>i.Email == user.Email || i.Email == user.Email))
             {
-                return true;
+                return false;
             }
-
+           
             throw new Exception();
         }
     }

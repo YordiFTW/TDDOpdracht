@@ -9,7 +9,7 @@ namespace TDD_Opdracht.Repositories
     {
         IEnumerable<User> GetAllUsers();
         User GetUserById(int userId);
-        User AddUser(User user);
+        dynamic AddUser(User user);
         User UpdateUser(User user);
         void DeleteUser(int userId);
 

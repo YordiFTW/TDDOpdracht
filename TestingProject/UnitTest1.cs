@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
+using System.Threading.Tasks;
 using AutoFixture;
 using AutoFixture.Xunit2;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Moq;
 using TDD_Opdracht.DbContext;
 using TDD_Opdracht.Models;
@@ -31,57 +33,6 @@ namespace TestingProject
 
 
 
-        //[Fact]
-        //public void GetLockedUsers_Invoke_LockedUsers_v2()
-        //{
-        //    // Arrange
-        //    var fixture = new Fixture();
-        //    var lockedUser = fixture.Build<User>().With(u => u.Id).Create();
-        //    IList<User> users = new List<User>
-        //        {
-        //            lockedUser,
-        //            fixture.Build<User>().With(u => u.Id).Create(),
-        //             fixture.Build<User>().With(u => u.Id).Create()
-        //        };
-
-        //    var usersMock = CreateDbSetMock(users);
-
-        //    var userContextMock = new Mock<UserDbContext>();
-        //    userContextMock.Setup(x => x.Users).Returns(usersMock.Object);
-
-        //    var usersService = new UserDataService(userContextMock.Object);
-
-        //    // Act
-        //    var lockedUsers = usersService.Save(user);
-
-        //    // Assert
-        //    Assert.Equal(new List<User> { lockedUser }, lockedUsers);
-        //}
-
-        [Fact]
-        public void Save_NewUserShouldBeAddedToTheListOfUsers()
-        {
-            var userRepository = new Mock<IUserRepository>();
-            var dbContext = new Mock<UserDbContext>();
-            var userDataService = new UserDataService(userRepository.Object, dbContext.Object);
-
-            User newUser = new User();
-
-            IList<User> users = new List<User>()
-                {
-                    new User { Id = 1, FirstName = "C# Piet", LastName = "Achterman", Email = "test@test.nl" },
-                    new User { Id = 2, FirstName = "Klaas", LastName = "Klossen", Email = "2@2.nl" },
-                    new User { Id = 3, FirstName = "Jan", LastName = "Danger", Email = "3@3.nl" }
-                };
-
-            User user = new User { Id = 4, FirstName = "Piet", LastName = "Bimmer", Email = "1@1.nl" };
-
-            userRepository.Setup(x => x.AddUser(user)).Returns(user);
-            newUser = userDataService.Save(user);
-
-            Assert.Equal(newUser,  user);
-        }
-
         [Fact]
         public void Validate_UserShouldBeNull()
         {
@@ -95,15 +46,19 @@ namespace TestingProject
             Assert.Throws<ArgumentNullException>(() => userDataService.Validate(user));
         }
 
-        [Fact]
-        public void Validate_EmailShouldbeUnique()
+        [Theory]
+        [InlineData("test@test.nl")]
+        [InlineData("2@2.nl")]
+        [InlineData("3@3.nl")]
+        [InlineData("4@4.nl")]
+        [InlineData("5@5.nl")]
+        public void Validate_EmailShouldbeUnique(object value)
         {
             var userRepository = new Mock<IUserRepository>();
             var dbContext = new Mock<UserDbContext>();
             var userDataService = new UserDataService(userRepository.Object, dbContext.Object);
 
-
-
+            bool isUnique = false;
 
             IList<User> users = new List<User>()
                 {
@@ -112,34 +67,42 @@ namespace TestingProject
                     new User { Id = 3, FirstName = "Jan", LastName = "Danger", Email = "3@3.nl" }
                 };
 
-            User user = new User { Id = 4, FirstName = "Piet", LastName = "Bimmer", Email = "1@1.nl" };
+            User user = new User { Id = 4, FirstName = "Piet", LastName = "Bimmer", Email = value.ToString() };
 
             userRepository.Setup(mr => mr.GetAllUsers()).Returns(users);
 
-            Assert.True(userDataService.Validate(user));
 
+            if (!users.Any(i => i.Email == user.Email || i.Email == user.Email))
+            {
+                isUnique = true;
+            }
+
+            Assert.True(isUnique);
 
         }
 
-        [Fact]
-        public void Validate_EmailShouldbeAnActualEmail()
+        [Theory]
+        [InlineData("yordiappelnl")]
+        [InlineData("yordi@.nl")]
+        [InlineData("@appel.nl")]
+        [InlineData("yordi@nl")]
+        [InlineData("yordi@!nl")]
+        [InlineData("yordi@@appel..nl")]
+        [InlineData("@.nl")]
+        [InlineData("yordi@appel.nl")]
+        public void Validate_EmailShouldbeAnActualEmail(object value)
         {
-
 
             var userRepository = new Mock<IUserRepository>();
             var dbContext = new Mock<UserDbContext>();
             var userDataService = new UserDataService(userRepository.Object, dbContext.Object);
 
 
-            User user = new User { Id = 1, FirstName = "test", LastName = "232", Email = "dwa@dwadw.nl" };
+            User user = new User { Id = 1, FirstName = "test", LastName = "232", Email = value.ToString() };
 
             Assert.True(userDataService.Validate(user));
 
-
         }
-
-        
-
 
 
         [Theory]
@@ -176,28 +139,67 @@ namespace TestingProject
             Assert.Throws<ArgumentNullException>(() => userDataService.Validate(user));
         }
 
-        //[Fact]
-        //public void Save_ShouldWriteUserDataToList()
-        //{
-        //    var userDataService = new UserDataService();
-        //    var userRepository = new Mock<IUserRepository>();
+        
 
-        //    IList<User> users = new List<User>
-        //        {
-        //            new User { Id = 1, FirstName = "C# Unleashed",
-        //                LastName = "111", Email = "1@1.nl" },
-        //            new User { Id = 2, FirstName = "ASP.Net Unleashed",
-        //                LastName = "222", Email = "2@2.nl" },
-        //            new User { Id = 3, FirstName = "Silverlight Unleashed",
-        //                LastName = "333", Email = "3@3.nl" }
-        //        };
+        [Fact]
+        public async Task StoreUsersInMoqDataBase()
+        {
+            //Arrange  
+            var options = new DbContextOptionsBuilder<UserDbContext>()
+                 .UseInMemoryDatabase("InMemoryDb")
+                 .Options;
+            var _dbContext = new UserDbContext(options);
 
-        //    User user = new User {Email = "sfdsfes", FirstName = "sfse", LastName = "sefsef" };
+            await _dbContext.Users.AddRangeAsync(
+                new User() { Id = 1, FirstName = "Piet", LastName = "Dimmer", Email = "test1@test.nl" },
+                new User() { Id = 2, FirstName = "Barry", LastName = "Bimmer", Email = "test2@test.nl" },
+                new User() { Id = 3, FirstName = "Jan", LastName = "Zimmer", Email = "test3@test.nl" }
+                );
+            await _dbContext.SaveChangesAsync();
 
-        //    userRepository.Setup(p => p.AddUser(user));
+            //Act  
+            var result = await _dbContext.Users.Select(p => p).ToArrayAsync();
 
-        //    Assert.Throws<ArgumentNullException>(() => userDataService.Validate(user));
-        //}
+            //Assert  
+            Assert.Equal(3, _dbContext.Users.Count());
+        }
+
+        [Fact]
+        public async Task Save_StoreNewUserInMoqDataBase()
+        {
+            var userRepository = new Mock<IUserRepository>();
+            var dbContext = new Mock<UserDbContext>();
+            var userDataService = new UserDataService(userRepository.Object, dbContext.Object);
+
+            
+            var options = new DbContextOptionsBuilder<UserDbContext>()
+                 .UseInMemoryDatabase("InMemoryDbq")
+                 .Options;
+            var _dbContext = new UserDbContext(options);
+
+            User user = new User { Id = 5, FirstName = "Fliet", LastName = "Klimmer", Email = "test4@test.nl" };
+
+            await _dbContext.Users.AddRangeAsync(
+                new User() { Id = 1, FirstName = "Piet", LastName = "Dimmer", Email = "test1@test.nl" },
+                new User() { Id = 2, FirstName = "Barry", LastName = "Bimmer", Email = "test2@test.nl" },
+                new User() { Id = 3, FirstName = "Jan", LastName = "Zimmer", Email = "test3@test.nl" }
+                );
+            await _dbContext.SaveChangesAsync();
+
+             
+            var result = await _dbContext.Users.Select(p => p).ToArrayAsync();
+
+            
+
+            userDataService.Save(user);
+
+
+            userRepository.Setup(x => x.AddUser(user)).Returns(_dbContext.Users.Add(user));
+            userRepository.Setup(x => x.AddUser(user)).Returns(_dbContext.SaveChanges());
+            userRepository.Setup(x => x.AddUser(user)).Returns(_dbContext.Users.ToList());
+             
+            Assert.Equal(4, _dbContext.Users.Count());
+        }
 
     }
 }
